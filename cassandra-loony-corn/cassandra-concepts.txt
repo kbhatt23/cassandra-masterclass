@@ -1,0 +1,492 @@
+om shree ganeshaya namah
+om shree sita rama lakshman hanuman
+
+- Apache Cassandra is a distributed nosql columnar data base management system to handle huge amount of data
+- SQL dbs we used for more than 2-3 decades but now since data has grown hugely these do not scale very well
+  hence no sql dbs like apache cassandra came into picture
+
+- Cassandra was developed by facebook and later open sourced to apache community
+- It has its own data model in the format of columnar entries, databases: keyspaces, entities: rows, column famlies and column etc
+  Also need to learn CQL to read/write data to the cassandra db
+
+- Consider use case of a new sartup built to focus on e commerce
+  it would sell products and hence product catalog is needed
+  we can use RDBMS where tables are group of data with rows and columns
+  row determine different entries and columns represent the field name
+  however we can have different category like books, tv, mobile etc and all of them will have their own colums set
+  if we use RDBMS then a lot of empty cells will be there and each fo these empty cell will occuy real space/memory in ROM and these wont be useful
+  due to this it will waste a lot of memory in ROM/disk specially in case of highly scalable data sets like e commerce/amazon
+  hence using rdmb for product catalog is very bad use case and it wastes a lot of memory on disk
+
+- the data model of rows and columns can be converted
+  in RDBMS we have one row for one entity
+  but in cassandra we can have n rows for single entity but row size will be number of columns with valid field value
+  structure:   id	columnname	columnvalue
+ 
+  eg in RDBMS:
+  id	model	brand	author	size	price
+  book1  - 	-	cole	 -	10
+  mob1   samsung samsung -	 10	1000
+
+  eg in cassandra
+  id	fieldname	fieldvalue
+  book1  athor		cole
+  book1  price		10
+
+  mob1  model		samsung
+  mob1  brand		samsung
+  mob1  size		10
+  mob1  price		1000 	
+	
+this way we are saving empty cells in case of rdbms and hence save memory on disk
+the above data model mentioned is also known as columnar data modelling, columnar data bases uses above model to store the data hence optimizing space
+hence good use case for very highly scalable data set
+
+- Benefits of using columnar data bases
+a. avoid empty cells and hence saves memory in disk: specially when we will have hue data set like orders/products etc
+b. no tight enforcement of schema per table: columsn can grow or reduce based on usage in future
+
+In case we want to increase the data set and also increase the i/o on these data set we can not have single node of db server
+this is called cluster in which we will have multiple nodes and data is partitioned
+approaches
+a. application talk to interface node, interface node knows about which node owns which hash of data
+   but this can cause single point of failure: eg is mongo where mongos is used but mongos can also be clustered but that is costly
+b. second approach is application can talk to any available node and operate on that 
+  eventualy data is moved to the real owner node behind the scene : 
+  eventual consistensy but with high availability as even thoug node goes down no downtime
+ 
+- the above architechtural approach is known as decentralized distributed system where there is no single master to route data
+
+features of cassandra
+a. distributed: clustered for high data set storage and high amount of i/o
+   eg: mongo,cassandra,hbase
+b. columnar, eg: hbase,cassandra
+c. decentralized: no single master node, client can talk to any availble node
+   eg: cassandra, hbase do not qualify for this even though it is distributed and columnar(based on hadoop)
+  due to beeing decentralized cassandra have high availability at the cost of eventual consistency -> CAP Theorom
+d. tunable consistency
+e. high availability
+f. data replication helps in fault tolerant: if one node goes down it is still available in another node
+g. use CQL to query data write data: quite similar to SQL
+h. support secondary indices: same like sql other than id we can create index for fast read/query
+
+- Cassandra use cases: perfect to use cassandra as db
+a. columnar data: meaning completely unstructured data n columns for one record and other columsn for other record
+b. huge amount of data like in petabytes
+
+- Limitations
+a. Not ACID compliant: follow CAP theorom
+   we can tune consistency to more strict ones but that will reduce the availability
+   if we want high availability it will reduce the consistency
+ how it works
+ to be fault tolerant cassandra stores partitioned data to multiple nodes
+ by default if we try to insert/update data it just update in single node and returns success, in background the node will be made in sync
+ so if one client goes toa nother node it might not have updated data but eventually it will get updated: eventual consistency
+ we can tune consistency level
+ a. all : node returns success only if all the replica nodes are updated: make it slow and hence availability is compromised
+    if all threads i/o sockets are blocked client will have to wait and hence availability is less
+b. choose min insync replica just like kafka, but in kafka producer ack is done in async and retry mode
+
+- Hadoop is a big data processing framework like a distributed computing framework
+  good use case of peta bytes of data ingestion and do recommendation aorund that
+  computation is done in paralle among multiple fast computers
+  it uses data base known as hbase
+  map reduce framework
+- hadoop cluster contains
+a. distributed file storage
+b. distributed daa base: hbase
+c. map reduce computation engine for parallel map filter computation
+ hbase is similar to cassandra : cassandra s also columnar and is decentralised making it more available and fault tolerant
+hbase is preferred in back ground slower batch jobs that are not real time
+cassandra is more fast and is more real time
+
+- Combination of nodes (each node is running one instance of cassandra db) is called cluster
+ cluster is represented in the form of a ring aka data center
+ we can have multiple clusters also working together meaning containing multiple ring of data centers
+ each of these clusters would be running in different geo location(aka regions in aws)
+ and each of the node would be running in individual different az within the region
+ single cluster nodes ensures : high availability, scalability and performance
+ multiple cluster adds one more level of fault tolerance + geolocation specific load distribution
+ -> client from india will get load distributed to cluster of nearest regions ensuring high performance
+
+- we can use a tool ccm or cassandra cluster manager to easily setup cassandra cluster for local/test environment
+  not good for production use case but good for local/test development
+  it has its own set of commands
+
+- ccm commands
+a. ccm create : create a cluster with provided name, provided nodes count and -s option to start
+b. ccm start: start current selected cluster
+c. ccm stop: stop current selected cluster
+d. ccm list: list names of all clusters
+e. ccm status: status of cluster
+f. ccm node1 show: details of specific node:
+  auto_bootstrap: this field/property of the cluster if set to true will help a new node to fetch data from existing cluster
+  default is false: in case set as true it auto populates the data from existing cluster to new node just added
+  ports exposed by cassandra cluster: 
+   -> 9160: used by thrift based rpc clients
+   -> 9042: used by binary protocols like cql
+   -> 7000: used by node to node communication
+   -> 7100: jmx port: for fetching any metrics using tools like jvisualvm, appd etc
+g. ccm remove: remove existing selected cluster
+
+- Before inserting and reading data in cassandra we must understand its data model/ how data is laid out
+ lets do bottom up approach: smalles unit first and then combine these smallest unit to make bigger part and finally complete the data model
+a. column: has a name and a data type and also contains a timestamp, each column contains this timestamp representing time of last modification
+  data type can be simple like int,float,double,text, boolean
+  or complex: like blob, counter, uuid, timestamp
+  or collections like list,set,map etc
+- data is stored in column using column name, column value pair
+
+b. column family: we can visualize table in terms of column family
+  for each keyspace we can group together similar working columsn using column families
+  we can add columsn any point of time to the column family
+ in a column family we will have a unique primary key
+ so we will have one column family for each table entry and combination of multiple columns(name value pair) each of them will have same unique primary id
+
+  book1 : represent column family and name: football skills, price:10 usd etc are individual columsn
+for specific primary key id it is called column family and individual collections of columns(name value pair) is called columns
+ primary key can also be composite key means combination of different columns are unique
+
+- logical data model in cassandra
+ each row (single entity like book1, samsung galaxy phone m22 etc) will contain below
+a. primary columns: primary key or composite primary key
+b. column family, collections of columns aka columns name, value pair
+ namespace = collection of rows
+ row = primary key column(name,value pair also can be composite) + collections of columns(aka column family)
+c. super column family
+  special type of column family, consist of collections of columns(name+ value) but same column family can be divided into multiple super column family
+  if we are querying with column values in combination than it is useful like AND option while select query
+  it can make query faster
+   Super column family is a subset of columns within the same column family
+ downside of super column family:
+ casandra do not index the columns added in super column family
+ avoid using super column family as during query based on column in super column family it will load all the columns and we can not get only specific column
+ so it takes very huge time in querying data based on key of super column family
+better choice than super column family is setting up composite keys
+
+configurations of column family:
+a. key-cache and value cache: can store keys pair in cache for faster memory
+b. row-cache: cache the row completely in memory
+
+- multiple rows will become namespace (similar to table in sql)
+
+- analogy b/w sql and cassandra (caution it is not actual but only to visualize)
+	Relational 			Cassandra
+   database				keyspace
+   table				column family
+   primary key				row column key : both can be composite
+   colmn name				same as relational
+   colmn value and data type		same as relational
+
+- Actual data structure of cassandra
+  Map<RowKey,SortedMap<ColKey,ColValue>>
+
+om shree ganeshaya namah
+om shree sita rama lakshman hanuman
+
+- CQL is made similar to SQL intentionally so that it is easier for sql db users to use cassandra
+- CQL is case insensitive meaning we can use any casing and it works:
+  -> internally everything like columns, column families, keyspaces are stored in lowercase
+  even if we give these names in caps it will still lowercase so that it works
+ -> however we can force case sensitivity of these names by putting in double quotes
+-> cql is the programming language and we have a command line utility aka cqlsh using which we can connect and run cql queries
+
+- replication strategy classes:
+ a. SimpleStrategy: used for single ring clsuter
+ b. NetworkToplogyStrategy: used for multi ring cluster, one ring running in one region with nodes in multiple azs and other rings in another region
+
+Column family advanced config
+a. bloom filter: using this we can ensure fast lookup/query : should be set to low value,
+  it ensures the probability of key values to be unique and easily searchable
+  might take more space if set to low value but query/lookup will be fast
+b. caching: key and row caching
+c. comment
+d. compaction strategy: data is first compacted and then stored in disk
+  we can customize the strategy of compaction per column family
+e. default ttl
+f. gc_grace_period: even after deletion of data using cql remove commands data still resides on disk in tombstone format
+   this defines the time for which thie temp storage is needed for removed items, default is 10 days and we can tweak this value here
+
+- even in cassandra data is stored in form of byte[] just like rabbitmq,kafka, mongo etc for efficient storage and fast queries
+- in cassandra we can not have nested collection advanced data type : set<text> works but not set<set<text>> nor map<text,<Set<text>>>
+  also in collection data type we can set indivdual element level ttl, meaning one element of list can have 10 second ttl and other as 100 second ttl
+
+counter is better than integer in case of unique count operations
+in case of integer below steps are added in code/client side
+a. aquire a lock
+b. get the current int value
+c. increment int value
+d. update column with added value
+e. release lock
+
+too much to be done to be synchronized in code
+using counter we can be thread safe and easy to increment by 1 or n value or decrement as well
+
+but problem is that counter can not be added in same column family along with other columns
+	(can not add in existing column family unlike columns that can be altered and added newly)
+we need to create a new column family with primary key and counter column together to create new column family
+ -> in this new columnfamily we can not add columns other then primary key and counter column: very important
+also can not create index on counter: actually does not make sense
+
+- create columnfamily counterfamily id primary key, views counter; here we can not add more columns only primary key + counter column allowed
+- update counterfamily set views = views + 1 where id = 'kanishkid';
+	->  if not exist it inserts with 1 as views otherwise increment in atomic way among multiple threads
+
+- in cassandra db update works only with condition where primary key is passed
+  for composite primary key pass all the primary key where clause
+
+- while updating collections data type column we can do collection operation
+  like relace all elements, insert new element, remove element etc
+
+- In typical db primary key uniquely identifies a row in a table
+  similarly in cassandra primary key is a column or collection of columns(composite primary key) that uniquely identifies a row in a column family
+  plus it is also used to distribute/partition the data in the specific node of a cluster/ring
+- primary key = partition key + clustering key
+
+- partition key decides which node of cassandra will own the data to save it/read it
+- clustering key decides how the data is stored in the single specific node's disk
+  in case of composite primary key , the first column becomes the partition key and remaining becomes the clustering key
+
+- Each of the node in a cluster is assigned a unique hash/uuid , based on this id the row ownership is determined among the nodes of the cluster
+ partitioner component generate a hash and divides this among the nodes of the cluster : this is known as token mentioned above
+
+ in case of single data set cluster first a range of hashes is generated by partitioner
+ and this whole range of min/max integer id is divided into subranges
+ these subranges are assigned to individual nodes of the cluster
+ similar thing happens among multiple data set cluster also and the range of hash is unique across different data sets of the cluster too
+
+- same hash function is used to generate the hash using partition key as the input and it outputs a random integer hash
+  the node have a unique range of hash number assigned using this partition key hash it identifies which node to insert/read
+  also based on the replication_factor the row is copied to other backup nodes aprt from this master node. also uses replication strategy algorithm class
+
+- types of partitioner
+a. RandomPartitioner: distributes data uniformly across cluster nodes using md5 hash algo
+b. murmur3partitioner: distributes data/token hash using murmur hash algo: better performance is better than md5 hash algo
+c. byteorderpartioner: generates a range of hash and not single value, not used due to multiple drawbacks
+   does not distribute the has among nodes evenly
+
+- clustering key determines how data is laid out within the same node
+  in case of multiple column primary key aka composite key
+  the first column becomes the parition key and remaining columns of the primary key becomes clustering key
+  how data is laid out
+  partion key	clustering key1	  clustering key2	clustering key3		remaining columns
+
+ the data in the disk is stored in sorted format using the clustering keys
+  first sorted using clustering key1 , then clustering key2 , then clustering key3
+  if we know this we can optimize the query as the data will be sorted and 
+	-> searching in this will be o(log n) -> binary search and not o(n) -> linear search
+
+om shree ganeshaya namah
+om shree sita rama lakshman hanuman
+
+The partition key(part of the primary key) led to sme restriction on the kind of queries that can be performed on the column family
+- We wont be able to execute query: select productid from product where author = 'coman';
+  it is because the primary key is productid and there is no clustering key, only partition key is the productid
+  the value is unique + it divides the data among multiple nodes of the cluster
+  so we can not query on conditional where clause with another column other than primary key's partition keys
+
+why so:
+- cassandra is decentralized hence client can make such query to any node
+  but the rows for this condition will be present on other nodes also and this node has to call other nodes to combine all the data
+  this is very expensive operation as cassandra has to scan all the nodes and will cause timeout and hence this is bad idea as this is very inefficient
+
+restrictions on partition keys
+- To handle such inefficient queries cassandra have limiations
+a. in conditional where clause we can use only specific columns
+  in column family definition we can set primary key
+  first bracket can contain n columns that make up the partition keys and other bracket can contain n number of clustering keys
+  in cql we can use where clause with all the partition key columns only
+  even if we pass single where clauss it wont work because:
+  during insertion hash will be generated using all the columns present in partition key
+  same will happen during where query and we wont be able to identify exact node where data is present
+  hence we must pass all the columns present in the partition key as part of where clause
+  same error will occur in the case of filter using in (item1,item2) , we must use 'in' filterting for all the columns present in the partition key
+
+b. restricts the operations that can be performed
+   As part of restriction in partition key we an not perform range query like > , < etc even on using all the parition keys
+   it is because it requires sorting and by default cassandra do not allow it for partition key columnsL can use = and in operators in partition keys
+   we can use token function in case we need range queries like <,> etc to identify the node's hashes
+   eg: select * from skus where token(column1,column2) >= token('col1 value search', 'col2 value search');
+   we also can not do order by using partition key as order by requires sorting and that wont be possible just be parition key
+
+restrictions on clustering keys
+data is laid out in single node in sorted way using cluserting key columns , first by first column and then by other columsn in sequence(of clustering keys)
+ we can use clustering columns as part of where clause but can not use any other column which is not part of either partition key or clustering key
+ also we can use range queries >,>= etc directly on the clustering columns but in sequence of definition
+ if we want to use 3 rd column of clustering key we must also pass other first 2 columns as well: otherwise we get an error
+ summary:
+ we need to pass all the columns as part of partition key in where clause : auto sorts by colustering key
+ we can also use clustering key in where clause but it need to pass all the columns that exist before itself in the definition
+ if we are passing 3rd clustering key's column then it will give error until we also pass first 2 columns of the clustering keys in where clause
+ also we can use order by and range(>,<= etc) for both but for partition key we must use token function and no function is needed for clustering key
+  -> only thing is we need to pass all the columns that exist before any specific column of the partition key
+
+- Indices or secondary indices can help us query fast lookups efficiently using columns other than primary keys
+	(based on restrictions on partition and clustering keys)
+ secondary indices creates different column family but that wont be visible this helps on query other than primary key columns
+ secondary indices are best used when that column have less cardinality(meaning having less different distinct values)
+ bad use case is to use secondary indices for columns having high cardinality
+ also make note secondary indices slows down insertions as there will be 2 column family insertion needed
+ -> also secondary indices can not be used for counter columns and super column families
+ 
+restrictions in secondar indices:
+a. we can use secondary index column in where clause and no need to pass any column present in primary key
+   -> both parition key and clustering keys can be skipped as this creatts internally a new column family
+b. if we use secondary index also it works but in combination if we want to also use partition key
+   then we still need to give all the partition keys
+c. we can not use in operator for secondary indices unlike partition key and clustering keys(obviously with restriction rules)
+d. also range operations do not work for secondary indices unlike we allow filtering
+   but remember performance will be bad as it will scan all the nodes and that can be bad for performance
+  hence it is not preferred to use range operators in case of secondary indices unlike partition and clustering keys
+e. using clustering keys with indices is not preferred due to performance as it need to allow filtering scan to all nodes:
+  do not work by default need to enable filtering that is bad for performance
+f. order by clause is also not supported for secondary indices
+g. we can also create index for collections data type columns
+   can help in operations like contains/containskey for that index and query works
+
+-- Allow Filtering option mentioned above is like find all items and then in memory filter out negative criterias
+  slow in performance and heavy on the node cluster
+
+om shree ganeshaya namah
+om shree sita rama lakshman hanuman
+
+- Cassandra architechture is inspired by google bigtable and aws dynamo db
+  log columnar files indices is inspired by google bigtable for fast lookup
+  partition and replication is inspired by aws dynamodb
+
+- Cassandra do a tradeoff in consistency for better faster performance hence consistency is tunable
+  it tradeoffs with availability and performance
+- can tune consitency level for read and write level differently
+a. write consistency: meaning how many replica nodes must be written before returning success to the client during insertion/updation
+  options
+  - one: client call any node, that node determine all the replica nodes using hash token function applied on the partition key
+         it request all the replica nodes to insert/update data as soon as any one returns that node returns success to the client
+         best case would be node itself is owner of the hash/token based on partition key of data
+  - all: same steps are followed as above but in this case node returns success once all the replica nodes updates the data
+         could be slow in performance
+  - quorum: we configure min in sync replica
+             same steps will be followed but once min nodes returns update success the orchestrator node returns success to the client
+             most commonly used is this
+  - local quorum: This is used in case of multi ring/data center clusters
+   it means how many min nodes in each data center/ring must be updated before returning success to the client during update/insert
+- All above consistency level works when replica nodes are up and running
+  in case of network failure or node beeing down the orchestrator node times out in this error case it store the data in local file
+   and then it returns success to the client
+   in the background job it keeps retrying until the reciever node succesfully updates the data, then the hint file data is removed
+   time interval of hint file is 3 hrs and is configurable
+   if within 3 hr node was not up then this data is lost as we can not keep hint file forever
+   this error recovery mechanism is know as hinted handoff
+
+b. read consistency: meaning before returning result of read query how many nodes to check for data
+both will slow down performance and reduce availability
+ consistency leavels are same as write ones
+a. one: client asks for data and cooridnator node calculates hash/token to identify node and replica nodes
+   it request the node with lowest latency as per the snitch algo calcualted
+   snitch stores past info on the netwrok latency etc and according to this calculation coordinator node sends the data to client
+   only one node data is fetched and sent success to the client
+b. all: 
+  coordinator node calls all the replica nodes in parallel, fails even if one node is down
+  among all data it returns latest timestamp data to client and do read repaid based on the config
+  this is the strongest consistency level but takes most time and hence lowest availability
+c. quorum:
+   read is requested from n configured number of nodes
+   how it works: token hash is generated based on partition key to identify node and replica nodes
+   as per snitch the fasted node is requested for data and hash is request for other nodes
+  if hash of the data and other replica nodes matches it returns the data success to the client
+  if not it calls other nodes for the data and compares the timestamp and return the data with latest timestamp
+  in suh case of hash inconsitency the coordinator nodes send update request to other replca nodes with the latest timestamp info
+  so that in future this node inconsistency in data is resolved: this is called read repairs
+  also there is a configuration on when the read repair is triggerred as doing it everytime can eat network bandwidth
+d. local quorum: avoid this as there can be interdata center communication
+   and read will be very time consuming hence ignore this one
+
+- the good value of quroum in read/write consistency depends on the keyspace's replication factor
+a. if replication factor is 1: we can only use consistency level as 'one' only
+   highest performance and consistency as +ves
+   low fault tolerance as -ves
+b. if rf is n : keep quorum value as n, this is highest fault tolerant
+   +ves: highest fault tolerant
+   -ves: too much disk is overconsumed due to extreme level of data replication,
+      performance will also be slow due to extreme netwrok communication among nodes to be made consistent
+  these above are extreme cases and can be avoided
+  good case will be to keep quorum value > 1 and < replication factor
+  read qurom + write quorum > rf
+  typically good quorom = ceiling((all rf + 1)/2)
+scenarios
+write quorum = rf
+read quorum = 1
+highest consistent but in this case write will be slow and read will be fast
+
+write quorum = 1
+read quorum = rf
+highest consistent but in this case write will be fast and read will be slow
+
+- It is very important to understand how cassandra stores the data in node
+ node will have below components
+
+RAM memory							Disk
+Memtable						Log File	SStable
+
+Whenever a data is requested to be written first it is written in log file of the disk then update in memtable(cache fast memory in RAM)
+after this success is returned by that specific node, after some time behind the scene data from memtable is pushed to sstable
+ sstable is the permanent storage disk
+
+storage components in cassandra
+a. Memtables: present in RAM , is fast and have a max size: in memory hash tables
+  storage format is in hashmap : Map<RowKey,<SortedMap<ColKey,ColValue>>>
+
+b. commit log: it contains action performed like event state
+  it do not hold the actual data but store all the actions performed
+  This commit log is very helpful in recovering data after crashes just like event source,
+  can replay the actions in the commit log to get final state of data
+c. SStable: present in disk and is the final result of the data, sorted string table
+  parts of sstable
+ index file : contains the address of the column family data (which is present in data file)
+   partition key id is also stored here so that we can have fast lookup
+  index file contains partition key and address of the column family which is present in the data file
+  sorted by partition key
+ bloom filter: it helps in identifying if the primary key exist or not, based on probabilistic model
+  meaning it might say the key is present even if it is not hence we need to keep bolling filter probability as low value
+  it is also present in RAM
+ data file: actually contains the data of column family, present on disk
+  data is stored in sorted based on column name as ke: sortedMap<colname,colvalue> 
+d. Row cache: it is present in RAM and is fast but need to have max capacity
+  config can be No: no cache ,ALL : cache infinte this can be bad, N: cache number of rows: good one 
+  Row cache stores the data in key value format with key as primary key and value as whole column family data
+e. Key cache: also stored in RAM and is fast
+   This stores key as primary key and value as address of the column family in the data file of ROM inside SSTable
+
+Now we have understood various storage componenents and how data is laid out in a cassandra node
+lets understand write flow
+event update log is updated in commit log present in disk, if timestamp is given that is used otherwise cassandra will add timestamp
+then memtable is updated in the RAM memory
+then rowcache entry is removed in the RAM memory. will get updated next time with latest value once a read is requested : lazy caching
+there will be periodic flush from memtable to sstable components like index file, data file, bloom filter
+Also just like kafka the sstable will also be compated 
+one there are too many sstables created it merges them into a single sstable due to storage efficiency
+
+Why is tombstoning the deleted data (sfot delete) needed
+in case we removed directly fron the node , due to distributed nature replica node may be down or might have network issue
+ so replica node will have data cached and might return data even if deleted in one node
+ making it soft delete ensures once replca node is up and running can remove gracefully and once grace_period is over it can remove from all nodes 
+
+how data is read in cassandra node
+request with key -> look for row cache if exist return if not -> search bloom filter for probability of key 
+ -> if key exist take the address from the key cache(key cache stores the value as address in disk for fast lookups) 
+ -> if not fetch the index table get the address of data file -> find data and update the key cache with latest data
+ -> then update the row cache
+
+we can see memtable is used only during sync flow from in memory to sstable merging
+
+remember key cache and row cache can be disabled as well
+
+- All the above steps are reading and writing from a single node
+ we use gossip protocol for inter node communication
+inter node communication ensures each node is aware of other node's state
+
+om shree ganeshaya namah
+om shree sita rama lakshman hanuman
+
+- To connect with cassandra cluster one famous java based library is datastax
+- We can use string cql based query to execute the command in cassandra using library but that is not good
+  better to use querybuilder object

@@ -1,0 +1,12 @@
+version: '3.9'
+
+services:
+  cassandra:
+    image: cassandra:4.1.1
+    ports:
+      - 9042:9042
+    volumes:
+      - C:/Kanishk/learning/cassandra-masterclass/docker-data/data/casssinglenodecluster:/var/lib/cassandra    # This is the volume that will persist data for cass1 node
+      - C:/Kanishk/learning/cassandra-masterclass/docker-data/config/casssinglenodecluster:/etc/cassandra
+    environment:
+      - CASSANDRA_CLUSTER_NAME=cassandracluster
